@@ -135,6 +135,12 @@ int main() {
         system("pause");
         return -1;
     }
+    DWORD attr = GetFileAttributesA(dllpath);
+    if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY)) {
+        log_error("region.dll not found. Make sure it's in the same directory.");
+        system("pause");
+        return -1;
+    }
     log_info("DLL path resolved to: " + std::string(dllpath));
 
 
