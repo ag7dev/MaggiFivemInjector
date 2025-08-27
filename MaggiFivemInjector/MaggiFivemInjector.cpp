@@ -115,13 +115,13 @@ int main() {
     SetConsoleTitleA("Maggi Fivem Injector");
     print_banner();
 
-    log_info("Waiting for FiveM.exe...");
+    log_info("Waiting for FiveM...");
 
     DWORD pid = 0;
     while (!pid) {
-        pid = getprocessbyname("FiveM.exe");
+        pid = getprocessbyname("FiveM_GTAProcess.exe");
         if (!pid) {
-            log_waiting("FiveM.exe not found, retrying...");
+            log_waiting("FiveM not found, retrying...");
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
