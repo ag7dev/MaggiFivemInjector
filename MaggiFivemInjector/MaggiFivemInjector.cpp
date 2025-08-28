@@ -5,6 +5,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <cwchar>
 
 // --- Design Improvements ---
 #define RESET   "\x1b[0m"
@@ -90,6 +91,14 @@ DWORD getprocessbyname(const char* name) {
         return 0; // Return 0 on failure
     }
 
+#ifdef UNICODE
+    wchar_t wname[MAX_PATH];
+    if (MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, MAX_PATH) == 0) {
+        CloseHandle(snap);
+        return 0;
+    }
+#endif
+
     if (Process32First(snap, &entry)) {
         do {
             char procname[MAX_PATH];
@@ -105,7 +114,7 @@ DWORD getprocessbyname(const char* name) {
     return 0; // Return 0 if not found
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     HANDLE hconsole = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD mode;
     if (GetConsoleMode(hconsole, &mode)) {
@@ -129,17 +138,29 @@ int main() {
     std::cout << std::endl;
     log_success("FiveM found! PID: " + std::to_string(pid));
 
+    if (argc < 2) {
+        log_error("Please drag and drop a DLL onto the injector executable.");
+        system("pause");
+        return -1;
+    }
+
     char dllpath[MAX_PATH];
-    if (GetFullPathNameA("region.dll", MAX_PATH, dllpath, nullptr) == 0) {
-        log_error("Couldn't find region.dll. Make sure it's in the same directory.", true);
+    if (GetFullPathNameA(argv[1], MAX_PATH, dllpath, nullptr) == 0) {
+        log_error("Couldn't resolve DLL path.", true);
         system("pause");
         return -1;
     }
     DWORD attr = GetFileAttributesA(dllpath);
     if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY)) {
-        log_error("region.dll not found. Make sure it's in the same directory.");
+        log_error("Provided DLL path is invalid or not a file.");
         system("pause");
         return -1;
+    }
+
+    std::string dll_name = dllpath;
+    size_t pos = dll_name.find_last_of("\\/");
+    if (pos != std::string::npos) {
+        dll_name = dll_name.substr(pos + 1);
     }
     log_info("DLL path resolved to: " + std::string(dllpath));
 
@@ -200,7 +221,7 @@ int main() {
     log_success("Remote thread created successfully.");
 
     std::cout << "\n------------------------------------------------------------------" << std::endl;
-    log_success("region.dll injected into FiveM! Have fun!");
+    log_success(dll_name + " injected into FiveM! Have fun!");
     log_info("You can close this window now.");
     std::cout << "------------------------------------------------------------------" << std::endl;
 
