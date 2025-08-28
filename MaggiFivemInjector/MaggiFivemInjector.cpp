@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cwchar>
+#include <shellapi.h>
 
 // --- Design Improvements ---
 #define RESET   "\x1b[0m"
@@ -80,6 +81,18 @@ void log_error(const std::string& msg, bool print_last_error = false) {
 }
 // --- End of Design Improvements ---
 
+bool is_run_as_admin() {
+    BOOL is_admin = FALSE;
+    PSID admin_group = nullptr;
+    SID_IDENTIFIER_AUTHORITY nt_authority = SECURITY_NT_AUTHORITY;
+    if (AllocateAndInitializeSid(&nt_authority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &admin_group)) {
+        CheckTokenMembership(nullptr, admin_group, &is_admin);
+        FreeSid(admin_group);
+    }
+    return is_admin;
+}
+
 
 DWORD getprocessbyname(const char* name) {
     PROCESSENTRY32 entry{};
@@ -123,6 +136,23 @@ int main(int argc, char* argv[]) {
 
     SetConsoleTitleA("Maggi Fivem Injector");
     print_banner();
+
+    if (!is_run_as_admin()) {
+        log_info("Requesting administrator privileges...");
+        char path[MAX_PATH];
+        if (GetModuleFileNameA(nullptr, path, MAX_PATH)) {
+            SHELLEXECUTEINFOA sei{ sizeof(sei) };
+            sei.lpVerb = "runas";
+            sei.lpFile = path;
+            sei.nShow = SW_SHOWNORMAL;
+            if (ShellExecuteExA(&sei)) {
+                return 0;
+            }
+        }
+        log_error("Failed to obtain administrator privileges.");
+        system("pause");
+        return -1;
+    }
 
     log_info("Waiting for FiveM...");
 
